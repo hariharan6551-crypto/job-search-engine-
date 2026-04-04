@@ -11,7 +11,7 @@ interface Job {
   salary: string;
   type: string;
   skills: string[];
-  matchScore: number;
+  matchScore?: number;
   posted: string;
   logo: string;
 }
@@ -44,12 +44,12 @@ export function JobCard({ job }: JobCardProps) {
       <div className="absolute top-4 right-4">
         <div
           className={`flex items-center gap-1 px-3 py-1.5 rounded-full bg-gradient-to-r ${getScoreBg(
-            job.matchScore
+            job.matchScore ?? 0
           )}`}
         >
-          <TrendingUp className={`w-3.5 h-3.5 ${getScoreColor(job.matchScore)}`} />
-          <span className={`text-xs font-bold ${getScoreColor(job.matchScore)}`}>
-            {job.matchScore}% Match
+          <TrendingUp className={`w-3.5 h-3.5 ${getScoreColor(job.matchScore ?? 0)}`} />
+          <span className={`text-xs font-bold ${getScoreColor(job.matchScore ?? 0)}`}>
+            {job.matchScore ?? 0}% Match
           </span>
         </div>
       </div>
