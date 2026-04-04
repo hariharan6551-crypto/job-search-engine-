@@ -15,11 +15,36 @@ export const elasticsearchConfig = {
 };
 
 export const jobMapping = {
+  settings: {
+    analysis: {
+      analyzer: {
+        semantic_english: {
+          type: 'custom',
+          tokenizer: 'standard',
+          filter: ['lowercase', 'english_stop', 'english_stemmer', 'synonym_graph'],
+        },
+      },
+      filter: {
+        english_stop: { type: 'stop', stopwords: '_english_' },
+        english_stemmer: { type: 'stemmer', language: 'english' },
+        synonym_graph: { 
+          type: 'synonym_graph', 
+          synonyms: [
+            'fresher, junior, entry level => 0_years',
+            'developer, engineer, programmer, coder',
+            'remote, wfh, work from home',
+            'ml, machine learning, ai, artificial intelligence'
+          ] 
+        },
+      },
+    },
+  },
   mappings: {
     properties: {
-      title: { type: 'text', analyzer: 'standard' },
-      company: { type: 'text' },
-      description: { type: 'text', analyzer: 'standard' },
+      title: { type: 'text', analyzer: 'semantic_english', fields: { keyword: { type: 'keyword' } } },
+      company: { type: 'text', fields: { keyword: { type: 'keyword' } } },
+      description: { type: 'text', analyzer: 'semantic_english' },
+      vector_embedding: { type: 'dense_vector', dims: 384, index: true, similarity: 'cosine' },
       location: { type: 'keyword' },
       skills: { type: 'keyword' },
       salary_min: { type: 'float' },

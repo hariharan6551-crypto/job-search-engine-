@@ -1,8 +1,14 @@
 # ============================================
-# Job AI Platform — Docker Compose
+# Job AI Platform — Production-Grade Cluster Engine
 # ============================================
 
 version: '3.9'
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
 
 services:
   # ===== PostgreSQL Database =====
@@ -10,10 +16,12 @@ services:
     image: postgres:16-alpine
     container_name: jobai-postgres
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
-      POSTGRES_DB: job_ai_platform
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password_change_me
+      POSTGRES_DB: ${DB_NAME:-job_ai_platform}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_password_change_me}
     ports:
       - "5432:5432"
     volumes:
@@ -21,12 +29,13 @@ services:
       - ../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
       - ../database/seed/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - jobai-network
+    logging: *default-logging
 
   # ===== Redis Cache =====
   redis:
@@ -37,6 +46,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -44,6 +54,7 @@ services:
       retries: 5
     networks:
       - jobai-network
+    logging: *default-logging
 
   # ===== Elasticsearch =====
   elasticsearch:
@@ -53,56 +64,64 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ports:
       - "9200:9200"
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
-      interval: 15s
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -v '\"status\":\"red\"' || exit 1"]
+      interval: 30s
       timeout: 10s
       retries: 5
     networks:
       - jobai-network
+    logging: *default-logging
 
-  # ===== Backend (NestJS) =====
+  # ===== Backend (NestJS API Engine) =====
   backend:
     build:
       context: ../backend
       dockerfile: ../docker/Dockerfile.backend
-    container_name: jobai-backend
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       NODE_ENV: production
       BACKEND_PORT: 3001
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: job_ai_platform
-      DB_USER: postgres
-      DB_PASSWORD: postgres_password_change_me
       REDIS_HOST: redis
-      REDIS_PORT: 6379
       ELASTICSEARCH_HOST: http://elasticsearch:9200
-      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key}
       NEXT_PUBLIC_AI_API_URL: http://ai-engine:8000
     ports:
-      - "3001:3001"
+      - "3001-3005:3001" # Port range mapping to support scaling
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
     networks:
       - jobai-network
+    logging: *default-logging
 
-  # ===== Frontend (Next.js) =====
+  # ===== Frontend (Next.js Application) =====
   frontend:
     build:
       context: ../frontend
       dockerfile: ../docker/Dockerfile.frontend
     container_name: jobai-frontend
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       NEXT_PUBLIC_API_URL: http://backend:3001/api
       NEXT_PUBLIC_AI_API_URL: http://ai-engine:8000
@@ -112,29 +131,34 @@ services:
       - backend
     networks:
       - jobai-network
+    logging: *default-logging
 
-  # ===== AI Engine (FastAPI) =====
+  # ===== AI Engine (FastAPI Models) =====
   ai-engine:
     build:
       context: ../ai-engine
       dockerfile: Dockerfile
-    container_name: jobai-ai-engine
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       AI_ENGINE_HOST: 0.0.0.0
       AI_ENGINE_PORT: 8000
       DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: job_ai_platform
-      DB_USER: postgres
-      DB_PASSWORD: postgres_password_change_me
     ports:
-      - "8000:8000"
+      - "8000-8005:8000"
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
     networks:
       - jobai-network
+    logging: *default-logging
 
 volumes:
   postgres_data:

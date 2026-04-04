@@ -26,6 +26,7 @@ export interface NormalizedJob {
   sourceUrl: string;
   source: string;
   postedAt: Date;
+  fingerprint?: string; // Deep Deduplication Hash
 }
 
 export class JobParser {
@@ -39,10 +40,14 @@ export class JobParser {
   ];
 
   normalize(raw: RawJobData): NormalizedJob {
+    const cleanTitle = this.cleanTitle(raw.title);
+    const cleanComp = this.cleanCompany(raw.company);
+    const cleanLoc = this.normalizeLocation(raw.location);
+
     return {
-      title: this.cleanTitle(raw.title),
-      company: raw.company.trim(),
-      location: this.normalizeLocation(raw.location),
+      title: cleanTitle,
+      company: cleanComp,
+      location: cleanLoc,
       salaryMin: this.parseSalaryMin(raw.salary),
       salaryMax: this.parseSalaryMax(raw.salary),
       type: this.detectJobType(raw.title + ' ' + raw.description),
@@ -51,11 +56,33 @@ export class JobParser {
       sourceUrl: raw.url,
       source: raw.source,
       postedAt: new Date(raw.postedDate),
+      fingerprint: this.generateFingerprint(cleanTitle, cleanComp, cleanLoc),
     };
   }
 
+  private generateFingerprint(title: string, company: string, location: string): string {
+    // Generates a unique deduplication hash for identical cross-platform jobs
+    const rawString = `${title}|${company}|${location}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    let hash = 0;
+    for (let i = 0; i < rawString.length; i++) {
+      const char = rawString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash).toString(16);
+  }
+
   private cleanTitle(title: string): string {
-    return title.replace(/\s+/g, ' ').trim().slice(0, 500);
+    let clean = title.replace(/\s+/g, ' ').trim().slice(0, 500);
+    // Normalize variant titles
+    if (/sde ?[1-3I-III]/i.test(clean)) clean = clean.replace(/sde ?/i, 'Software Development Engineer ');
+    if (/(sr|snr|senior)\.? /i.test(clean)) clean = clean.replace(/(sr|snr)\.? /i, 'Senior ');
+    return clean;
+  }
+
+  private cleanCompany(company: string): string {
+    // Strip arbitrary legal suffixes for normalized matching
+    return company.replace(/(\s*)(inc|corp|ltd|llc|private limited|pvt ltd)\.?$/i, '').trim();
   }
 
   private normalizeLocation(location: string): string {

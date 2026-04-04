@@ -102,9 +102,10 @@ class JobMatcher:
         preferred_locations: List[str] = None,
         salary_min: Optional[float] = None,
         salary_max: Optional[float] = None,
+        user_behavior_history: Dict[str, Any] = None,
         limit: int = 10,
     ) -> Dict[str, Any]:
-        """Match user profile to jobs and return ranked results."""
+        """Match user profile to jobs using Multi-Factor Score and Contextual Tracking."""
         start_time = time.time()
 
         user_skills = [s.lower() for s in skills]
@@ -136,15 +137,28 @@ class JobMatcher:
             elif "bangalore" in job_loc_lower or "karnataka" in job_loc_lower:
                 region_multiplier = 1.10
 
-            # Weighted overall score with region priority
+            # Context-Aware Recommendation Multiplier (Simulated Preference Embeddings)
+            behavior_multiplier = 1.0
+            if user_behavior_history:
+                clicked = user_behavior_history.get("clicked_titles", [])
+                saved = user_behavior_history.get("saved_companies", [])
+                if any(word.lower() in job["title"].lower() for word in clicked):
+                    behavior_multiplier += 0.15
+                if job["company"].lower() in [c.lower() for c in saved]:
+                    behavior_multiplier += 0.20
+
+            # Unified Multi-Factor Score (0-100) combining Semantic Similarity, Overlap, and Behavior
             overall_score = min(100.0, (
-                skill_score * 0.45
-                + location_score * 0.35 * region_multiplier
-                + salary_score * 0.20
-            ))
+                (skill_score * 0.40)
+                + (location_score * 0.30 * region_multiplier)
+                + (salary_score * 0.30)
+            ) * behavior_multiplier)
 
             # Deep AI Explainability formatting
             reasons = []
+            if behavior_multiplier > 1.0:
+                reasons.append("★ Highly aligned with your recent search behavior")
+                
             if skill_score >= 50:
                 matched = [s for s in user_skills if s in job["skills"]]
                 reasons.append(f"✓ Strong Skill Overlap ({int(skill_score)}% match): {', '.join(matched[:3])}")

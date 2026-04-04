@@ -14,6 +14,10 @@ import {
   Sparkles,
   Clock,
   CheckCircle,
+  BellRing,
+  Send,
+  XCircle,
+  Calendar
 } from 'lucide-react';
 import { SkillGapAnalyzer } from '@/components/SkillGapAnalyzer';
 import { CareerPathAI } from '@/components/CareerPathAI';
@@ -27,12 +31,16 @@ const metrics = [
   { label: 'Interview Calls', value: '8', change: '+2 new', icon: Zap, color: 'from-neon-pink to-pink-400' },
 ];
 
-const recentActivity = [
-  { type: 'applied', text: 'Applied to Senior Full-Stack Engineer at TechCorp', time: '2 hours ago', status: 'pending' },
-  { type: 'viewed', text: 'AI/ML Engineer at DataVerse viewed your profile', time: '5 hours ago', status: 'positive' },
-  { type: 'matched', text: 'New AI match: DevOps Engineer at CloudNine — 92% match', time: '1 day ago', status: 'match' },
-  { type: 'shortlisted', text: 'Shortlisted for Frontend Engineer at DesignFlow', time: '2 days ago', status: 'positive' },
-  { type: 'applied', text: 'Applied to Python Developer at PyWorks Studio', time: '3 days ago', status: 'pending' },
+const smartAlerts = [
+  { type: 'job', text: '5 New Data Analyst jobs in Coimbatore', time: 'Just now', priority: 'high' },
+  { type: 'skill', text: 'Python is trending in 80% of your matches', time: '2 hours ago', priority: 'medium' },
+  { type: 'salary', text: 'Salaries for React roles increased by 15%', time: '1 day ago', priority: 'low' },
+];
+
+const applicationTracker = [
+  { role: 'Senior Full-Stack Engineer', company: 'TechCorp India', status: 'Interview', date: 'Oct 12', type: 'positive' },
+  { role: 'AI/ML Engineer', company: 'DataVerse AI', status: 'Pending', date: 'Oct 14', type: 'pending' },
+  { role: 'Python Developer', company: 'PyWorks Studio', status: 'Rejected', date: 'Oct 10', type: 'negative' },
 ];
 
 const topMatches = [
@@ -41,11 +49,21 @@ const topMatches = [
   { title: 'DevOps Cloud Architect', company: 'CloudNine', score: 85, location: 'Chennai (Remote)', salary: '₹20L-₹35L' },
 ];
 
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'positive': return 'text-neon-green';
-    case 'match': return 'text-neon-cyan';
-    default: return 'text-yellow-400';
+function getAlertIcon(type: string) {
+  switch (type) {
+    case 'job': return <Briefcase className="w-4 h-4 text-neon-cyan" />;
+    case 'skill': return <Zap className="w-4 h-4 text-neon-purple" />;
+    case 'salary': return <TrendingUp className="w-4 h-4 text-neon-green" />;
+    default: return <BellRing className="w-4 h-4 text-yellow-400" />;
+  }
+}
+
+function getAppStatusIcon(type: string) {
+  switch (type) {
+    case 'positive': return <CheckCircle className="w-4 h-4 text-neon-green" />;
+    case 'pending': return <Send className="w-4 h-4 text-neon-cyan" />;
+    case 'negative': return <XCircle className="w-4 h-4 text-red-500" />;
+    default: return <Clock className="w-4 h-4 text-yellow-400" />;
   }
 }
 
@@ -161,35 +179,76 @@ export default function DashboardPage() {
             </div>
           </motion.div>
 
-          {/* Recent Activity */}
+          {/* Smart Alerts */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="glass-card p-6"
+            className="glass-card p-6 flex flex-col gap-6"
           >
-            <div className="flex items-center gap-3 mb-5">
-              <Clock className="w-5 h-5 text-neon-purple" />
-              <h2 className="text-lg font-semibold font-heading">Activity</h2>
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <BellRing className="w-5 h-5 text-neon-purple" />
+                <h2 className="text-lg font-semibold font-heading">Smart Alerts</h2>
+              </div>
+              <div className="space-y-4">
+                {smartAlerts.map((alert, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.6 + idx * 0.08 }}
+                    className="flex gap-3 p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="mt-0.5 shrink-0">
+                      {getAlertIcon(alert.type)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-foreground font-medium">{alert.text}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{alert.time}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-4">
-              {recentActivity.map((activity, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.6 + idx * 0.08 }}
-                  className="flex gap-3"
-                >
-                  <div className={`mt-1 shrink-0 ${getStatusColor(activity.status)}`}>
-                    <CheckCircle className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs text-foreground leading-relaxed">{activity.text}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{activity.time}</p>
-                  </div>
-                </motion.div>
-              ))}
+
+            {/* Application Tracker */}
+            <div className="pt-6 border-t border-white/10">
+              <div className="flex items-center gap-3 mb-4">
+                <Send className="w-5 h-5 text-neon-cyan" />
+                <h2 className="text-lg font-semibold font-heading">Application Tracker</h2>
+              </div>
+              <div className="space-y-4">
+                {applicationTracker.map((app, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.8 + idx * 0.08 }}
+                    className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0">
+                        {getAppStatusIcon(app.type)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{app.role}</p>
+                        <p className="text-[10px] text-muted-foreground">{app.company}</p>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className={`text-[10px] font-bold uppercase ${
+                        app.type === 'positive' ? 'text-neon-green' : app.type === 'negative' ? 'text-red-500' : 'text-neon-cyan'
+                      }`}>
+                        {app.status}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end mt-1">
+                        <Calendar className="w-3 h-3" /> {app.date}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </motion.div>
         </div>
