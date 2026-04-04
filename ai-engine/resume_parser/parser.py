@@ -8,7 +8,21 @@ from typing import Dict, List, Any
 
 
 class ResumeParser:
-    """Parse resumes and extract skills, experience, education, etc."""
+    """Parse resumes and extract skills, experience, education, projects, etc."""
+
+    # Skill Normalization Map
+    SKILL_NORMALIZATION = {
+        "js": "javascript",
+        "ts": "typescript",
+        "ml": "machine learning",
+        "dl": "deep learning",
+        "aws": "amazon web services",
+        "gcp": "google cloud platform",
+        "k8s": "kubernetes",
+        "reactjs": "react",
+        "node": "node.js",
+        "postgres": "postgresql",
+    }
 
     # Common technical skills database
     SKILLS_DB = [
@@ -55,14 +69,16 @@ class ResumeParser:
         experience = self._extract_experience(text)
         education = self._extract_education(text)
         certifications = self._extract_certifications(text)
+        projects = self._extract_projects(text)
         summary = self._generate_summary(text, skills, experience)
-        score = self._calculate_score(skills, experience, education, certifications)
+        score = self._calculate_score(skills, experience, education, certifications, projects)
 
         return {
             "skills": skills,
             "experience": experience,
             "education": education,
             "certifications": certifications,
+            "projects": projects,
             "summary": summary,
             "score": score,
         }
@@ -109,8 +125,10 @@ class ResumeParser:
             # Use word boundary matching
             pattern = r'\b' + re.escape(skill) + r'\b'
             if re.search(pattern, text_lower):
+                # Normalize skill
+                normalized = self.SKILL_NORMALIZATION.get(skill, skill)
                 # Capitalize properly
-                found_skills.append(skill.title() if len(skill) > 3 else skill.upper())
+                found_skills.append(normalized.title() if len(normalized) > 3 else normalized.upper())
 
         return list(set(found_skills))
 
@@ -141,6 +159,27 @@ class ResumeParser:
                         return line.strip()[:200]
         return "Education details not found"
 
+    def _extract_projects(self, text: str) -> List[str]:
+        """Extract project descriptions."""
+        projects = []
+        text_lower = text.lower()
+        if "project" in text_lower:
+            lines = text.split("\n")
+            in_projects = False
+            for line in lines:
+                lower_line = line.lower().strip()
+                if lower_line.startswith("project") or lower_line == "academic projects":
+                    in_projects = True
+                    continue
+                if in_projects and len(line.strip()) > 0:
+                    if len(line.strip()) > 10:
+                        projects.append(line.strip()[:150])
+                    if len(projects) >= 3:
+                        break
+                elif in_projects and len(line.strip()) == 0:
+                    continue  # Ignore empty lines
+        return projects
+
     def _extract_certifications(self, text: str) -> List[str]:
         """Extract certifications."""
         certs = []
@@ -167,6 +206,7 @@ class ResumeParser:
         experience: str,
         education: str,
         certifications: List[str],
+        projects: List[str],
     ) -> int:
         """Calculate resume quality score (0-100)."""
         score = 0
@@ -186,7 +226,10 @@ class ResumeParser:
         else:
             score += 5
 
-        # Certifications (max 15 points)
-        score += min(len(certifications) * 5, 15)
+        # Projects (max 10 points)
+        score += min(len(projects) * 5, 10)
+
+        # Certifications (max 5 points)
+        score += min(len(certifications) * 5, 5)
 
         return min(score, 100)

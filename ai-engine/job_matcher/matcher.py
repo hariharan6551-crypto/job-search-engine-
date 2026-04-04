@@ -126,22 +126,39 @@ class JobMatcher:
                 salary_min, salary_max, job["salary_min"], job["salary_max"]
             )
 
-            # Weighted overall score
-            overall_score = (
-                skill_score * 0.50
-                + location_score * 0.30
-                + salary_score * 0.20
-            )
+            # Regional Priority Weighting (High priority for TN, KL, KA)
+            region_multiplier = 1.0
+            job_loc_lower = job["location"].lower()
+            if "tamil nadu" in job_loc_lower or "coimbatore" in job_loc_lower or "chennai" in job_loc_lower:
+                region_multiplier = 1.2
+            elif "kerala" in job_loc_lower or "kochi" in job_loc_lower:
+                region_multiplier = 1.15
+            elif "bangalore" in job_loc_lower or "karnataka" in job_loc_lower:
+                region_multiplier = 1.10
 
-            # Build match reasons
+            # Weighted overall score with region priority
+            overall_score = min(100.0, (
+                skill_score * 0.45
+                + location_score * 0.35 * region_multiplier
+                + salary_score * 0.20
+            ))
+
+            # Deep AI Explainability formatting
             reasons = []
             if skill_score >= 50:
                 matched = [s for s in user_skills if s in job["skills"]]
-                reasons.append(f"Skill match: {', '.join(matched[:3])}")
-            if location_score >= 70:
-                reasons.append(f"Location: {job['location']}")
-            if salary_score >= 60:
-                reasons.append("Salary range aligns with expectations")
+                reasons.append(f"✓ Strong Skill Overlap ({int(skill_score)}% match): {', '.join(matched[:3])}")
+            else:
+                missing = [s for s in job["skills"] if s not in user_skills]
+                reasons.append(f"⚠ Missing Core Skills: {', '.join(missing[:2])}")
+                
+            if location_score >= 80:
+                reasons.append(f"✓ Ideal Location ({int(location_score)}% match): {job['location']}")
+            elif region_multiplier > 1.0:
+                reasons.append(f"✓ Regional Priority Area ({job['location']})")
+                
+            if salary_score >= 80:
+                reasons.append(f"✓ Compensation Aligns perfectly")
 
             scored_jobs.append({
                 "job_id": job["job_id"],

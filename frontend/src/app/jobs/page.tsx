@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Search, SlidersHorizontal, MapPin, Briefcase, Clock, Bookmark,
-  Building2, DollarSign, ExternalLink, Sparkles, TrendingUp,
+  Building2, DollarSign, ExternalLink, Sparkles, TrendingUp, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { FilterRibbon } from '@/components/FilterRibbon';
 import { SmartSearchBar } from '@/components/SmartSearchBar';
+import { useEffect } from 'react';
 
 interface Job {
   id: string;
@@ -21,6 +22,7 @@ interface Job {
   matchScore: number;
   matchReasons: string[];
   saved: boolean;
+  isExpanded?: boolean;
 }
 
 const mockJobs: Job[] = [
@@ -89,12 +91,29 @@ function getScoreStroke(score: number) {
 }
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState(mockJobs);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [savedOnly, setSavedOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate lazy loading API fetch
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setJobs(mockJobs.map(j => ({ ...j, isExpanded: false })));
+      setIsLoading(false);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const toggleSave = (id: string) => {
     setJobs((prev) =>
       prev.map((j) => (j.id === id ? { ...j, saved: !j.saved } : j))
+    );
+  };
+
+  const toggleExpand = (id: string) => {
+    setJobs((prev) =>
+      prev.map((j) => (j.id === id ? { ...j, isExpanded: !j.isExpanded } : j))
     );
   };
 
@@ -144,8 +163,27 @@ export default function JobsPage() {
             </div>
           </div>
 
+          {/* Skeletons while loading */}
+          {isLoading && (
+            <div className="space-y-4">
+              {[1, 2, 3].map((skeleton) => (
+                <div key={skeleton} className="glass-card p-5 md:p-6 animate-pulse">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="w-16 h-16 rounded-full bg-white/5 mx-auto md:mx-0 shrink-0" />
+                    <div className="flex-1 space-y-3">
+                      <div className="h-6 bg-white/5 rounded w-3/4 mx-auto md:mx-0" />
+                      <div className="h-4 bg-white/5 rounded w-1/2 mx-auto md:mx-0" />
+                      <div className="h-4 bg-white/5 rounded w-full mx-auto md:mx-0 mt-4" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Job Cards */}
-          <div className="space-y-4">
+          {!isLoading && (
+            <div className="space-y-4">
             {displayJobs.map((job, idx) => (
               <motion.div
                 key={job.id}
@@ -217,15 +255,45 @@ export default function JobsPage() {
                       </span>
                     </div>
 
-                    {/* AI Match Reasons */}
-                    <div className="mt-3 p-3 rounded-lg bg-white/[0.02] border border-white/5">
-                      <div className="flex items-center gap-1.5 mb-1.5">
-                        <Sparkles className="w-3 h-3 text-neon-cyan" />
-                        <span className="text-[10px] font-semibold text-neon-cyan uppercase tracking-wider">AI Match Insight</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {job.matchReasons.join(' · ')}
-                      </p>
+                    {/* AI Match Reasons Expandable */}
+                    <div className="mt-4 rounded-lg bg-white/[0.02] border border-white/5 overflow-hidden transition-all duration-300">
+                      <button 
+                        onClick={() => toggleExpand(job.id)}
+                        className="w-full p-3 flex items-center justify-between hover:bg-white/[0.02] transition-colors"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-neon-cyan animate-pulse-neon" />
+                          <span className="text-xs font-semibold text-neon-cyan uppercase tracking-wider">Why this job?</span>
+                        </div>
+                        {job.isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-neon-cyan" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-neon-cyan" />
+                        )}
+                      </button>
+                      
+                      {job.isExpanded && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          className="px-4 pb-4 border-t border-white/5 pt-3"
+                        >
+                          <ul className="space-y-2">
+                            {job.matchReasons.map((reason, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-sm text-foreground/80">
+                                <div className="mt-1 w-1.5 h-1.5 rounded-full bg-neon-cyan shrink-0" />
+                                <span>{reason}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <div className="mt-3 pt-3 border-t border-white/5">
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block mb-1">AI Recommendation Confidence</span>
+                            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-neon-cyan to-neon-purple rounded-full" style={{ width: `${job.matchScore}%` }} />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
                     </div>
 
                     {/* Bottom Row */}
@@ -253,6 +321,7 @@ export default function JobsPage() {
               </motion.div>
             ))}
           </div>
+          )}
         </div>
       </section>
     </div>

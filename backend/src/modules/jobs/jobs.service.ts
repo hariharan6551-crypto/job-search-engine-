@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, Between, In } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { JobEntity } from './job.entity';
 
 interface JobFilterOptions {
@@ -19,10 +21,17 @@ export class JobsService {
   constructor(
     @InjectRepository(JobEntity)
     private readonly jobRepository: Repository<JobEntity>,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async findAll(options: JobFilterOptions) {
     const { location, type, skills, salaryMin, salaryMax, page, limit, sortBy } = options;
+    const cacheKey = `jobs_all_${JSON.stringify(options)}`;
+    
+    const cachedData = await this.cacheManager.get(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
 
     const queryBuilder = this.jobRepository.createQueryBuilder('job');
     queryBuilder.where('job.isActive = :isActive', { isActive: true });
@@ -57,16 +66,24 @@ export class JobsService {
 
     const [data, total] = await queryBuilder.getManyAndCount();
 
-    return {
+    const result = {
       data,
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
     };
+
+    // Cache results for 5 minutes
+    await this.cacheManager.set(cacheKey, result, 300000);
+    return result;
   }
 
   async search(query: string, location?: string) {
+    const cacheKey = `jobs_search_${query}_${location || 'any'}`;
+    const cachedSearch = await this.cacheManager.get(cacheKey);
+    if (cachedSearch) return cachedSearch;
+
     const queryBuilder = this.jobRepository.createQueryBuilder('job');
     queryBuilder.where('job.isActive = :isActive', { isActive: true });
     queryBuilder.andWhere(
@@ -84,7 +101,11 @@ export class JobsService {
     queryBuilder.take(50);
 
     const [data, total] = await queryBuilder.getManyAndCount();
-    return { data, total };
+    const result = { data, total };
+    
+    // Cache deep searches for fast autocomplete UX
+    await this.cacheManager.set(cacheKey, result, 300000);
+    return result;
   }
 
   async findById(id: string): Promise<JobEntity> {
