@@ -311,8 +311,11 @@ export default function JobsPage() {
                         >
                           <Bookmark className={`w-4 h-4 ${job.saved ? 'fill-neon-cyan' : ''}`} />
                         </button>
+                        <button className="px-3 py-1.5 rounded-lg bg-neon-purple/10 text-neon-purple text-[10px] font-bold border border-neon-purple/20 hover:bg-neon-purple/20 transition-colors flex items-center gap-1 uppercase tracking-wider">
+                          <Sparkles className="w-3 h-3" /> Auto Cover Letter
+                        </button>
                         <button className="btn-primary-gradient px-4 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5">
-                          Apply Now <ExternalLink className="w-3 h-3" />
+                          One-Click Apply <ExternalLink className="w-3 h-3" />
                         </button>
                       </div>
                     </div>

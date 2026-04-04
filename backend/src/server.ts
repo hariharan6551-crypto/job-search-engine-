@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import * as compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import { Logger } from './utils/logger';
 
 async function bootstrap() {
@@ -14,6 +15,15 @@ async function bootstrap() {
   // Security
   app.use(helmet());
   app.use(compression());
+  
+  // Rate limiting to prevent API abuse
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // Limit each IP to 100 requests per windowMs
+      message: 'Too many requests from this IP, please try again later.',
+    }),
+  );
 
   // CORS
   app.enableCors({
