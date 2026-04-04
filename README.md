@@ -55,8 +55,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/job-ai-platform.git
-cd job-ai-platform
+git clone https://github.com/hariharan6551-crypto/job-search-engine-.git
+cd job-search-engine-
 
 # Install all dependencies
 npm run install:all
