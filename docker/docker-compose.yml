@@ -1,0 +1,149 @@
+# ============================================
+# Job AI Platform — Docker Compose
+# ============================================
+
+version: '3.9'
+
+services:
+  # ===== PostgreSQL Database =====
+  postgres:
+    image: postgres:16-alpine
+    container_name: jobai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: job_ai_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_change_me
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ../database/seed/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jobai-network
+
+  # ===== Redis Cache =====
+  redis:
+    image: redis:7-alpine
+    container_name: jobai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jobai-network
+
+  # ===== Elasticsearch =====
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: jobai-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - jobai-network
+
+  # ===== Backend (NestJS) =====
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: jobai-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      BACKEND_PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: job_ai_platform
+      DB_USER: postgres
+      DB_PASSWORD: postgres_password_change_me
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ELASTICSEARCH_HOST: http://elasticsearch:9200
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key}
+      NEXT_PUBLIC_AI_API_URL: http://ai-engine:8000
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - jobai-network
+
+  # ===== Frontend (Next.js) =====
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: jobai-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3001/api
+      NEXT_PUBLIC_AI_API_URL: http://ai-engine:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - jobai-network
+
+  # ===== AI Engine (FastAPI) =====
+  ai-engine:
+    build:
+      context: ../ai-engine
+      dockerfile: Dockerfile
+    container_name: jobai-ai-engine
+    restart: unless-stopped
+    environment:
+      AI_ENGINE_HOST: 0.0.0.0
+      AI_ENGINE_PORT: 8000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: job_ai_platform
+      DB_USER: postgres
+      DB_PASSWORD: postgres_password_change_me
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - jobai-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
+networks:
+  jobai-network:
+    driver: bridge

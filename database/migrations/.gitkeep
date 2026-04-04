@@ -1,0 +1,5 @@
+-- Migrations directory
+-- Place migration files here in format: YYYYMMDD_description.sql
+-- Run migrations in order using a migration tool or manually
+
+-- Example: 20260101_initial_schema.sql → database/schema.sql

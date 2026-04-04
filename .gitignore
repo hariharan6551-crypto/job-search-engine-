@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+.next/
+*.log
+.env
+.DS_Store
+coverage/
+__pycache__/
+*.pyc
+venv/
+.venv/
+ai-engine/venv/
+ai-engine/.venv/
+
+# IDEs and environments
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+docker-compose.override.yml
+
+# OS files
+Thumbs.db

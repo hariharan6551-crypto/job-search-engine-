@@ -1,0 +1,28 @@
+{
+  "name": "job-ai-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered job search platform with resume analysis and smart recommendations",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:ai": "cd ai-engine && uvicorn main:app --reload --port 8000",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install && cd ../ai-engine && pip install -r requirements.txt",
+    "docker:up": "docker-compose -f docker/docker-compose.yml up --build",
+    "docker:down": "docker-compose -f docker/docker-compose.yml down",
+    "db:migrate": "cd database && psql -U postgres -f schema.sql",
+    "db:seed": "cd database && psql -U postgres -f seed/seed.sql",
+    "lint": "cd frontend && npm run lint && cd ../backend && npm run lint",
+    "test": "cd frontend && npm test && cd ../backend && npm test"
+  },
+  "workspaces": [
+    "frontend",
+    "backend",
+    "shared"
+  ],
+  "keywords": ["jobs", "ai", "resume-parser", "career", "recommendations"],
+  "author": "Job AI Platform Team",
+  "license": "MIT"
+}
