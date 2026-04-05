@@ -66,7 +66,7 @@ export function LocationHeatmap() {
         <div className="absolute inset-0 bg-grid opacity-30" />
 
         {/* State regions (simplified visual) */}
-        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="xMidYMid meet">
           {/* Karnataka */}
           <path d="M35,45 L55,42 L58,55 L55,68 L42,70 L35,60 Z" fill="rgba(0,245,255,0.03)" stroke="rgba(0,245,255,0.1)" strokeWidth="0.3" />
           {/* Tamil Nadu */}

@@ -13,6 +13,7 @@ import {
   Sparkles,
   LogIn,
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: Sparkles },
@@ -71,13 +72,20 @@ export function Navbar() {
             </Link>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-white/5 transition-colors"
-          >
-            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Theme Toggle & Mobile Menu Toggle */}
+          <div className="flex items-center gap-2 md:hidden">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            >
+              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+
+          <div className="hidden md:block">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
 

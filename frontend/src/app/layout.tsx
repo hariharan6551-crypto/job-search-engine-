@@ -3,6 +3,7 @@ import './globals.css';
 import { Navbar } from '@/components/Navbar';
 import { AIChatBot } from '@/components/AIChatBot';
 import { Toaster } from 'sonner';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'JobAI — AI-Powered Career Platform',
@@ -23,8 +24,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background antialiased">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         {/* Background Effects */}
         <div className="fixed inset-0 bg-grid pointer-events-none z-0" />
         <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-radial from-neon-cyan/5 via-transparent to-transparent pointer-events-none z-0" />
@@ -52,6 +54,7 @@ export default function RootLayout({
             },
           }}
         />
+        </ThemeProvider>
       </body>
     </html>
   );
