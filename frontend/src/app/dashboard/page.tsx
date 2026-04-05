@@ -73,12 +73,12 @@ function getAppStatusIcon(type: string) {
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.08 } },
-};
+} as const;
 
 const item = {
   hidden: { opacity: 0, y: 15 },
   show: { opacity: 1, y: 0 },
-};
+} as const;
 
 export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(true);
